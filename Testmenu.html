@@ -2,15 +2,15 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Timbratura Mobile</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; margin: 0; padding: 0; }
-    .container { max-width: 480px; margin: auto; padding: 20px; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .clock { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-    #msgBanner { display: none; padding: 10px; margin-top: 10px; font-weight: bold; }
-    input, button, select { width: 100%; margin: 5px 0; padding: 10px; font-size: 16px; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; padding: 0; margin: 0; }
+    .container { max-width: 480px; margin: auto; padding: 20px; background: white; margin-top: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button, select { width: 100%; padding: 10px; margin: 5px 0; font-size: 16px; }
+    #msgBanner { display: none; margin-top: 10px; font-weight: bold; padding: 10px; white-space: pre-line; }
+    .clock { font-size: 24px; font-weight: bold; margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -41,8 +41,13 @@ function login() {
   token = btoa(username + ':' + key);
   fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query', {
     method: 'POST',
-    headers: { 'Authorization': 'Basic ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: `SELECT id FROM Users WHERE user_name='${username}'` })
+    headers: {
+      'Authorization': 'Basic ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      query: "SELECT id FROM Users WHERE user_name='" + username + "';"
+    })
   })
   .then(r => r.json())
   .then(d => {
@@ -53,71 +58,86 @@ function login() {
       localStorage.setItem('username', username);
       document.getElementById('loginBox').style.display = 'none';
       document.getElementById('timbraturaBox').style.display = 'block';
+      document.getElementById('msgBanner').style.display = 'none';
     } else {
       document.getElementById('loginError').innerText = 'Credenziali non valide';
     }
-  }).catch(() => {
-    document.getElementById('loginError').innerText = 'Errore di connessione';
+  })
+  .catch(() => {
+    document.getElementById('loginError').innerText = 'Errore di rete o credenziali non valide';
   });
 }
+
 function timbra() {
   const tipo = document.getElementById('tipo').value;
+  if (!token || !userid || !username) {
+    alert("Sessione scaduta. Fai di nuovo login.");
+    return;
+  }
   navigator.geolocation.getCurrentPosition(pos => {
     const lat = pos.coords.latitude.toFixed(3);
     const lon = pos.coords.longitude.toFixed(3);
     fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-    .then(r => r.json())
-    .then(addr => {
-      const address = addr.display_name || '';
-      const now = new Date();
-      const data = now.toISOString().split('T')[0];
-      const ora = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-      fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create', {
-        method: 'POST',
-        headers: { 'Authorization': 'Basic ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          elementType: 'Timbrature',
-          element: {
-            vcf_1_1: 'timbratura mobile',
-            vcf_1_2: tipo,
-            vcf_1_3: lat,
-            vcf_1_4: lon,
-            vcf_1_5: address,
-            vcf_1_6: data,
-            vcf_1_7: ora.toString(),
-            assigned_user_id: userid,
-            description: `Timbratura via mobile da ${username}`
-          }
-        })
-      }).then(r => r.json()).then(res => {
-        const msg = document.getElementById('msgBanner');
-        if (res.status === 200) {
-          msg.style.display = 'block';
-          msg.style.background = '#d4edda';
-          msg.style.color = '#155724';
-          msg.innerText = `Timbratura di ${tipo.toLowerCase()} registrata alle ${new Date().toLocaleTimeString()} all’indirizzo:
+      .then(r => r.json())
+      .then(addr => {
+        const address = addr.display_name || '';
+        const now = new Date();
+        const data = now.toISOString().split('T')[0];
+        const ora = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            elementType: 'Timbrature',
+            element: {
+              vcf_1_1: 'timbratura mobile',
+              vcf_1_2: tipo,
+              vcf_1_3: lat,
+              vcf_1_4: lon,
+              vcf_1_5: address,
+              vcf_1_6: data,
+              vcf_1_7: ora.toString(),
+              assigned_user_id: userid,
+              description: 'Timbratura via mobile da ' + username
+            }
+          })
+        }).then(res => res.json())
+          .then(data => {
+            const banner = document.getElementById('msgBanner');
+            if (data.status === 200 && data.data && data.data.id) {
+              banner.style.display = 'block';
+              banner.style.backgroundColor = '#d4edda';
+              banner.style.color = '#155724';
+              banner.innerText = `Timbratura di ${tipo.toLowerCase()} registrata alle ${now.toLocaleTimeString()} all’indirizzo:
 ${address}`;
-        } else {
-          msg.style.display = 'block';
-          msg.style.background = '#f8d7da';
-          msg.style.color = '#721c24';
-          msg.innerText = 'Errore: timbratura non registrata. (Riprova quando avrai più connessione)';
-        }
+            } else {
+              banner.style.display = 'block';
+              banner.style.backgroundColor = '#f8d7da';
+              banner.style.color = '#721c24';
+              banner.innerText = 'Errore: timbratura non registrata. (Riprova quando avrai più connessione)';
+            }
+          });
       });
-    });
   }, () => {
-    alert('Geolocalizzazione negata. Attivala dalle impostazioni del browser.');
+    alert('Geolocalizzazione negata. Attiva la posizione dalle impostazioni del browser.');
   });
 }
+
 function logout() {
   localStorage.clear();
   document.getElementById('timbraturaBox').style.display = 'none';
   document.getElementById('loginBox').style.display = 'block';
+  document.getElementById('msgBanner').style.display = 'none';
 }
+
 setInterval(() => {
-  const clock = document.getElementById('clock');
-  if (clock) clock.textContent = new Date().toLocaleTimeString();
+  const el = document.getElementById('clock');
+  if (el) el.innerText = new Date().toLocaleTimeString();
 }, 1000);
+
 window.onload = () => {
   token = localStorage.getItem('token') || '';
   userid = localStorage.getItem('userid') || '';
