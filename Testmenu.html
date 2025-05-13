@@ -45,7 +45,7 @@ function login() {
       'Authorization': 'Basic ' + token,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ query: "SELECT id FROM Users WHERE LOWER(user_name)=LOWER('" + username + "');" })
+    body: JSON.stringify({ query: "SELECT id FROM Users WHERE user_name='" + username + "';" })
   })
   .then(r => r.json())
   .then(d => {
@@ -58,7 +58,7 @@ function login() {
       document.getElementById('timbraturaBox').style.display = 'block';
       document.getElementById('msgBanner').style.display = 'none';
     } else {
-      document.getElementById('loginError').innerText = 'Credenziali non valide';
+      document.getElementById('loginError').innerText = 'Login fallito. Risposta server: ' + JSON.stringify(d);
     }
   })
   .catch(() => {
