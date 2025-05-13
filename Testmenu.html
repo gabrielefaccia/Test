@@ -34,30 +34,27 @@
   </div>
 </div>
 <script>
+function base64EncodeUnicode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
 let token = '', userid = '', username = '';
 function login() {
   username = document.getElementById('username').value.trim();
   const key = document.getElementById('accessKey').value.trim();
-  token = btoa(username + ':' + key);
+  token = base64EncodeUnicode(username + ':' + key);
   fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query', {
     method: 'POST',
     headers: {
       'Authorization': 'Basic ' + token,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ query: "SELECT id, user_name FROM Users;" })
+    body: JSON.stringify({ query: "SELECT id FROM Users WHERE user_name='" + username + "';" })
   })
   .then(r => r.json())
   .then(d => {
     if (d.status === 200 && d.data.length > 0) {
-      
-    const match = d.data.find(u => u.user_name.toLowerCase() === username.toLowerCase());
-    if (match) {
-      userid = match.id;
-    } else {
-      userid = '';
-    }
-    
+      userid = d.data[0].id;
       localStorage.setItem('token', token);
       localStorage.setItem('userid', userid);
       localStorage.setItem('username', username);
