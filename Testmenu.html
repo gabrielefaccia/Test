@@ -34,15 +34,11 @@
   </div>
 </div>
 <script>
-function base64EncodeUnicode(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
 let token = '', userid = '', username = '';
 function login() {
   username = document.getElementById('username').value.trim();
   const key = document.getElementById('accessKey').value.trim();
-  token = base64EncodeUnicode(username + ':' + key);
+  token = btoa(username + ':' + key);
   fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query', {
     method: 'POST',
     headers: {
@@ -70,7 +66,84 @@ function login() {
   });
 }
 
+
 function timbra() {
+  const tipo = document.getElementById('tipo').value;
+  if (!token || !username) {
+    alert("Sessione non valida. Effettua di nuovo il login.");
+    return;
+  }
+  // Prima otteniamo l'user ID
+  fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      query: "SELECT id FROM Users WHERE user_name='" + username + "';"
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data || !data.data || data.data.length === 0) {
+      alert("Impossibile trovare l'ID utente per " + username);
+      return;
+    }
+    const userid = data.data[0].id;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude.toFixed(3);
+      const lon = pos.coords.longitude.toFixed(3);
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+        .then(r => r.json())
+        .then(addr => {
+          const address = addr.display_name || '';
+          const now = new Date();
+          const dataStr = now.toISOString().split('T')[0];
+          const ora = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+          fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Basic ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              elementType: 'Timbrature',
+              element: {
+                vcf_1_1: 'timbratura mobile',
+                vcf_1_2: tipo,
+                vcf_1_3: lat,
+                vcf_1_4: lon,
+                vcf_1_5: address,
+                vcf_1_6: dataStr,
+                vcf_1_7: ora.toString(),
+                assigned_user_id: userid,
+                description: 'Timbratura via mobile da ' + username
+              }
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            const banner = document.getElementById('msgBanner');
+            if (data.status === 200) {
+              banner.style.display = 'block';
+              banner.style.backgroundColor = '#d4edda';
+              banner.style.color = '#155724';
+              banner.innerText = `Timbratura di ${tipo.toLowerCase()} registrata alle ${new Date().toLocaleTimeString()} all’indirizzo:
+${address}`;
+            } else {
+              banner.style.display = 'block';
+              banner.style.backgroundColor = '#f8d7da';
+              banner.style.color = '#721c24';
+              banner.innerText = 'Errore: timbratura non registrata. (Riprova quando avrai più connessione)';
+            }
+          });
+        });
+    }, () => {
+      alert('Geolocalizzazione negata. Attiva la posizione dalle impostazioni del browser.');
+    });
+  });
+
   const tipo = document.getElementById('tipo').value;
   if (!token || !userid || !username) {
     alert("Sessione non valida. Effettua di nuovo il login.");
