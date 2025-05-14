@@ -2,303 +2,110 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Timbratura Mobile</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; text-align: center; margin: 0; padding: 0; }
-    .container { max-width: 480px; margin: auto; padding: 20px; background: white; margin-top: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; }
-    h2 { color: #333; }
-    input, button, select { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
-    button { background-color: #007bff; color: white; border: none; cursor: pointer; transition: background-color 0.3s ease; }
-    button:hover { background-color: #0056b3; }
-    #msgBanner { display: none; margin-top: 15px; font-weight: bold; padding: 12px; white-space: pre-line; border-radius: 4px; }
-    .clock { font-size: 28px; font-weight: bold; margin: 15px 0 20px 0; color: #555; }
-    #loginError { color: red; margin-top: 5px; font-size: 14px; }
-  </style>
 </head>
 <body>
-<div class="container">
-  <img src="https://www.fefautomazioni.com/images/logo_fef.png" alt="Logo FEF" style="max-width: 150px; margin-bottom: 20px;">
-  <h2>Timbratura Mobile</h2>
-  <div id="loginBox">
-    <input type="text" id="username" placeholder="Nome utente VTE">
-    <input type="password" id="accessKey" placeholder="Access Key VTE">
-    <button onclick="login()">Accedi</button>
-    <p id="loginError"></p>
-  </div>
+  <h2>Login Timbratura</h2>
+  <input type="text" id="username" placeholder="Nome utente" />
+  <input type="password" id="accessKey" placeholder="Access Key" />
+  <button onclick="accedi()">Accedi</button>
+  <p id="loginMsg" style="color:red;"></p>
+
   <div id="timbraturaBox" style="display:none;">
-    <div class="clock" id="clock">--:--:--</div>
-    <p>Utente: <strong id="loggedInUserDisplay"></strong></p>
+    <h3>Timbratura</h3>
     <select id="tipo">
       <option value="Entrata">Entrata</option>
       <option value="Uscita">Uscita</option>
     </select>
     <button onclick="timbra()">Timbra Ora</button>
-    <div id="msgBanner"></div>
-    <button onclick="logout()" style="background-color: #6c757d; margin-top:10px;">Logout</button>
+    <p id="timbraMsg"></p>
   </div>
-</div>
 
-<script>
-  // Variabili Globali per lo stato della sessione
-  let G_token = '';
-  let G_userid = '';
-  let G_username_from_vte = ''; // Username con il case corretto, come restituito da VTE
+  <script>
+    let basicToken = '';
+    let assignedUserId = '';
+    let username = '';
 
-  const VTE_API_BASE_URL = 'https://crm.fefcentroautomazioni.it/restapi/v1/vtews';
+    function accedi() {
+      username = document.getElementById('username').value;
+      const accessKey = document.getElementById('accessKey').value;
+      basicToken = btoa(username + ':' + accessKey);
 
-  /**
-   * Funzione di Login
-   */
-  async function login() {
-    const usernameInput = document.getElementById('username').value.trim();
-    const keyInput = document.getElementById('accessKey').value.trim();
-    const loginErrorEl = document.getElementById('loginError');
-    loginErrorEl.innerText = '';
-
-    if (!usernameInput || !keyInput) {
-      loginErrorEl.innerText = 'Nome utente e Access Key sono obbligatori.';
-      return;
-    }
-
-    const tempToken = btoa(usernameInput + ':' + keyInput);
-    console.log("Tentativo di login per:", usernameInput);
-
-    try {
-      // Query per verificare l'utente e ottenere il suo ID e l'username corretto.
-      // NOTA: Questa query è case-sensitive per user_name.
-      // Se possibile, modificare in VTE o usare LOWER() se supportato:
-      // query: `SELECT id, user_name FROM Users WHERE LOWER(user_name)=LOWER('${usernameInput}');`
-      const query = `SELECT id, user_name FROM Users WHERE user_name='${usernameInput}';`;
-      console.log("Esecuzione query per user ID:", query);
-
-      const response = await fetch(`${VTE_API_BASE_URL}/query`, {
+      fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query', {
         method: 'POST',
         headers: {
-          'Authorization': 'Basic ' + tempToken,
+          'Authorization': 'Basic ' + basicToken,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: query })
-      });
-
-      console.log("Risposta dal server (login query):", response.status, response.statusText);
-
-      if (!response.ok) {
-        let errorMsg = `Errore ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          console.error("Dettaglio errore API (login query):", errorData);
-          // VTE_RESPONSE_ADAPT: Adatta 'errorData.error.message' se la struttura dell'errore VTE è diversa
-          if (errorData && errorData.error && errorData.error.message) {
-            errorMsg = `Errore VTE (${response.status}): ${errorData.error.message}`;
-          } else if (response.status === 401) {
-            errorMsg = 'Access Key non valida o utente non autorizzato.';
-          }
-        } catch (e) {
-          console.error("Impossibile parsare il corpo dell'errore JSON (login query)", e);
+        body: JSON.stringify({ query: `SELECT id FROM Users WHERE user_name='${username}'` })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 200 && data.data && data.data.length > 0) {
+          assignedUserId = data.data[0].id;
+          document.getElementById('loginMsg').innerText = 'Login riuscito. ID utente: ' + assignedUserId;
+          document.getElementById('timbraturaBox').style.display = 'block';
+        } else {
+          document.getElementById('loginMsg').innerText = 'Credenziali non valide.';
         }
-        loginErrorEl.innerText = errorMsg;
-        return;
-      }
-
-      const data = await response.json();
-      console.log("Dati JSON ricevuti (login query):", data);
-
-      // VTE_RESPONSE_ADAPT: Verifica la struttura di 'data' per il successo e i risultati.
-      // Comunemente VTE usa: { "success": true, "result": [ ... ] }
-      if (data.success === true && data.result && data.result.length > 0) {
-        const userData = data.result[0];
-        // VTE_RESPONSE_ADAPT: Assicurati che 'userData.id' e 'userData.user_name' siano corretti.
-        G_userid = userData.id;
-        G_username_from_vte = userData.user_name; // Username dal DB con case corretto
-        G_token = tempToken;
-
-        localStorage.setItem('vte_token', G_token);
-        localStorage.setItem('vte_userid', G_userid);
-        localStorage.setItem('vte_username', G_username_from_vte);
-
-        document.getElementById('loginBox').style.display = 'none';
-        document.getElementById('timbraturaBox').style.display = 'block';
-        document.getElementById('loggedInUserDisplay').innerText = G_username_from_vte;
-        loginErrorEl.innerText = '';
-        document.getElementById('msgBanner').style.display = 'none';
-        console.log("Login effettuato. User ID:", G_userid, "Username VTE:", G_username_from_vte);
-
-      } else if (data.success === true && data.result && data.result.length === 0) {
-        loginErrorEl.innerText = 'Nome utente non trovato. Verifica la correttezza e maiuscole/minuscole.';
-        console.warn("Utente non trovato dalla query:", usernameInput);
-      } else if (data.success === false && data.error) {
-        // VTE_RESPONSE_ADAPT: Adatta 'data.error.message'
-        loginErrorEl.innerText = `Errore da VTE: ${data.error.message}`;
-        console.error("Errore API VTE (login query):", data.error);
-      } else {
-        loginErrorEl.innerText = 'Credenziali non valide o risposta inattesa dal server.';
-        console.warn("Risposta inattesa o credenziali non valide (login query):", data);
-      }
-
-    } catch (error) {
-      console.error("Errore generico durante il login:", error);
-      loginErrorEl.innerText = 'Errore di rete o problema durante il login. Controlla la console per dettagli.';
-    }
-  }
-
-  /**
-   * Funzione di Timbratura
-   */
-  async function timbra() {
-    const tipo = document.getElementById('tipo').value;
-    const banner = document.getElementById('msgBanner');
-
-    if (!G_token || !G_userid || !G_username_from_vte) {
-      alert("Sessione non valida o utente non identificato. Effettua di nuovo il login.");
-      logout();
-      return;
-    }
-
-    banner.style.display = 'block';
-    banner.style.backgroundColor = '#e2e3e5';
-    banner.style.color = '#495057';
-    banner.innerText = 'Timbratura in corso... attendere prego.';
-
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000, // Aumentato timeout per geolocalizzazione
-          maximumAge: 0
-        });
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById('loginMsg').innerText = 'Errore di rete o server.';
       });
+    }
 
-      const lat = position.coords.latitude.toFixed(5); // Aumentata precisione
-      const lon = position.coords.longitude.toFixed(5); // Aumentata precisione
-      console.log("Geolocalizzazione ottenuta:", lat, lon);
+    function timbra() {
+      const tipo = document.getElementById('tipo').value;
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
 
-      const nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=it`);
-      if (!nominatimResponse.ok) {
-        throw new Error(`Errore Nominatim: ${nominatimResponse.statusText} (Status: ${nominatimResponse.status})`);
-      }
-      const addrData = await nominatimResponse.json();
-      const address = addrData.display_name || 'Indirizzo non disponibile';
-      console.log("Indirizzo ottenuto:", address);
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+          .then(res => res.json())
+          .then(data => {
+            const indirizzo = data.display_name || 'Indirizzo non trovato';
+            const now = new Date();
+            const dataStr = now.toISOString().split('T')[0];
+            const oraSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
-      const now = new Date();
-      const dataStr = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
-      const oraInSecondi = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            const payload = {
+              elementType: 'Timbrature',
+              element: {
+                vcf_1_1: 'timbratura mobile',
+                vcf_1_2: tipo,
+                vcf_1_3: lat.toString(),
+                vcf_1_4: lon.toString(),
+                vcf_1_5: indirizzo,
+                vcf_1_6: dataStr,
+                vcf_1_7: oraSec.toString(),
+                assigned_user_id: assignedUserId,
+                description: 'Timbratura via mobile da ' + username
+              }
+            };
 
-      const timbraturaPayload = {
-        elementType: 'Timbrature', // Nome del modulo VTE
-        element: {
-          // VTE_MODULE_FIELDS_ADAPT: Mappa questi campi ai nomi REALI dei campi nel tuo modulo Timbrature in VTE
-          vcf_1_1: 'Timbratura Mobile App',   // Nome timbrature (o altro identificativo)
-          vcf_1_2: tipo,                      // Tipo timbratura (Entrata/Uscita)
-          vcf_1_3: lat.toString(),            // Latitudine
-          vcf_1_4: lon.toString(),            // Longitudine
-          vcf_1_5: address,                   // Indirizzo
-          vcf_1_6: dataStr,                   // Data
-          vcf_1_7: oraInSecondi.toString(),   // Ora (in secondi dal giorno)
-          assigned_user_id: G_userid,         // ID utente VTE corretto
-          description: `Timbratura ${tipo} via App Mobile da ${G_username_from_vte}\nIndirizzo: ${address}` // Descrizione aggiuntiva
-        }
-      };
-
-      console.log("Invio timbratura con payload:", JSON.stringify(timbraturaPayload, null, 2));
-
-      const createResponse = await fetch(`${VTE_API_BASE_URL}/create`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Basic ' + G_token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(timbraturaPayload)
+            fetch('https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Basic ' + basicToken,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(response => {
+              if (response.status === 200) {
+                document.getElementById('timbraMsg').innerText = 'Timbratura registrata correttamente';
+              } else {
+                document.getElementById('timbraMsg').innerText = 'Errore durante la timbratura';
+              }
+            });
+          });
+      }, () => {
+        alert('Geolocalizzazione non disponibile o negata.');
       });
-
-      console.log("Risposta dal server (creazione timbratura):", createResponse.status, createResponse.statusText);
-      const createData = await createResponse.json();
-      console.log("Dati JSON ricevuti (creazione timbratura):", createData);
-
-      // VTE_RESPONSE_ADAPT: Controlla la struttura di 'createData' per il successo.
-      if (createResponse.ok && createData.success === true && createData.result) {
-        banner.style.backgroundColor = '#d4edda';
-        banner.style.color = '#155724';
-        banner.innerText = `Timbratura di ${tipo.toLowerCase()} registrata con successo alle ${now.toLocaleTimeString()}.\nIndirizzo: ${address}`;
-      } else {
-        let errorMsg = 'Errore: timbratura non registrata.';
-        // VTE_RESPONSE_ADAPT: Adatta 'createData.error.message'
-        if (createData && createData.error && createData.error.message) {
-          errorMsg = `Errore VTE: ${createData.error.message}. Timbratura non registrata.`;
-        } else if (!createResponse.ok) {
-          errorMsg = `Errore server (${createResponse.status}): timbratura non registrata.`;
-        }
-        banner.style.backgroundColor = '#f8d7da';
-        banner.style.color = '#721c24';
-        banner.innerText = errorMsg;
-        console.error("Errore durante la creazione della timbratura:", createData || createResponse.statusText);
-      }
-
-    } catch (error) {
-      console.error('Errore grave durante la timbratura:', error);
-      banner.style.display = 'block';
-      banner.style.backgroundColor = '#f8d7da';
-      banner.style.color = '#721c24';
-      if (error.message && (error.message.toLowerCase().includes("geolocation") || error.message.toLowerCase().includes("user denied geolocation"))) {
-         banner.innerText = 'Geolocalizzazione fallita. Assicurati di aver dato i permessi e che il GPS sia attivo. Impossibile timbrare.';
-      } else if (error.message && error.message.includes("Nominatim")) {
-        banner.innerText = `Errore nel recupero dell'indirizzo: ${error.message}. Timbratura non completata.`;
-      } else {
-        banner.innerText = 'Errore imprevisto durante la timbratura. Riprova o contatta il supporto.';
-      }
     }
-  }
-
-  /**
-   * Funzione di Logout
-   */
-  function logout() {
-    G_token = '';
-    G_userid = '';
-    G_username_from_vte = '';
-    localStorage.removeItem('vte_token');
-    localStorage.removeItem('vte_userid');
-    localStorage.removeItem('vte_username');
-
-    document.getElementById('timbraturaBox').style.display = 'none';
-    document.getElementById('loginBox').style.display = 'block';
-    document.getElementById('loginError').innerText = '';
-    document.getElementById('msgBanner').style.display = 'none';
-    document.getElementById('username').value = '';
-    document.getElementById('accessKey').value = '';
-    console.log("Logout effettuato.");
-  }
-
-  /**
-   * Aggiorna l'orologio
-   */
-  setInterval(() => {
-    const clockEl = document.getElementById('clock');
-    if (clockEl) {
-      clockEl.innerText = new Date().toLocaleTimeString('it-IT');
-    }
-  }, 1000);
-
-  /**
-   * Gestione caricamento pagina
-   */
-  window.onload = () => {
-    G_token = localStorage.getItem('vte_token') || '';
-    G_userid = localStorage.getItem('vte_userid') || '';
-    G_username_from_vte = localStorage.getItem('vte_username') || '';
-
-    if (G_token && G_userid && G_username_from_vte) {
-      console.log("Sessione ripristinata da localStorage:", G_username_from_vte, G_userid);
-      document.getElementById('loginBox').style.display = 'none';
-      document.getElementById('timbraturaBox').style.display = 'block';
-      document.getElementById('loggedInUserDisplay').innerText = G_username_from_vte;
-    } else {
-      console.log("Nessuna sessione valida trovata, mostro il box di login.");
-      document.getElementById('timbraturaBox').style.display = 'none'; // Assicura che sia nascosto
-      document.getElementById('loginBox').style.display = 'block'; // Assicura che sia visibile
-    }
-  };
-</script>
+  </script>
 </body>
 </html>
