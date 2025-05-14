@@ -4,6 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Timbratura Mobile</title>
+  <style>
+    #msgBanner {
+      display: none;
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
 </head>
 <body>
   <h2>Login Timbratura</h2>
@@ -19,7 +36,7 @@
       <option value="Uscita">Uscita</option>
     </select>
     <button onclick="timbra()">Timbra Ora</button>
-    <p id="timbraMsg"></p>
+    <div id="msgBanner"></div>
   </div>
 
   <script>
@@ -38,16 +55,21 @@
           'Authorization': 'Basic ' + basicToken,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ query: `SELECT id FROM Users WHERE user_name='${username}'` })
+        body: JSON.stringify({ query: "SELECT id, user_name FROM Users;" })
       })
       .then(res => res.json())
       .then(data => {
         if (data.status === 200 && data.data && data.data.length > 0) {
-          assignedUserId = data.data[0].id;
-          document.getElementById('loginMsg').innerText = 'Login riuscito. ID utente: ' + assignedUserId;
-          document.getElementById('timbraturaBox').style.display = 'block';
+          const match = data.data.find(u => u.user_name.toLowerCase() === username.toLowerCase());
+          if (match) {
+            assignedUserId = match.id;
+            document.getElementById('loginMsg').innerText = 'Login riuscito.';
+            document.getElementById('timbraturaBox').style.display = 'block';
+          } else {
+            document.getElementById('loginMsg').innerText = 'Utente non trovato.';
+          }
         } else {
-          document.getElementById('loginMsg').innerText = 'Credenziali non valide.';
+          document.getElementById('loginMsg').innerText = 'Errore nel recupero utenti.';
         }
       })
       .catch(err => {
@@ -95,11 +117,16 @@
             })
             .then(res => res.json())
             .then(response => {
+              const banner = document.getElementById('msgBanner');
               if (response.status === 200) {
-                document.getElementById('timbraMsg').innerText = 'Timbratura registrata correttamente';
+                banner.className = 'success';
+                banner.innerText = `Timbratura di ${tipo.toLowerCase()} registrata correttamente alle ${new Date().toLocaleTimeString()} all’indirizzo:
+${indirizzo}`;
               } else {
-                document.getElementById('timbraMsg').innerText = 'Errore durante la timbratura';
+                banner.className = 'error';
+                banner.innerText = 'Errore durante la timbratura.';
               }
+              banner.style.display = 'block';
             });
           });
       }, () => {
