@@ -12,15 +12,13 @@ let basicToken = "Z2FicmllbGUuZmFjY2lhOk9VdGM1TjVvZlB4YXR0YUk=";
 let currentUsername = "";
 let assignedUserId = "";
 
-// Login visuale, ma tecnico con token Gabriele
 function accedi() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("accessKey").value;
   currentUsername = username;
 
-  // Query corretta con escape e punto e virgola
-  const queryString = "SELECT id FROM Users WHERE user_name=\"" + username + "\";";
-  
+  const queryString = `SELECT id FROM Users WHERE user_name="${username}";`;
+
   fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query", {
     method: "POST",
     headers: {
