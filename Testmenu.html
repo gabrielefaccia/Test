@@ -1,7 +1,4 @@
 
-<!-- Questo file è identico all'originale ma con assegnato_a dinamico -->
-<!-- HTML abbreviato per chiarezza -->
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -11,26 +8,26 @@
 </head>
 <body>
 <script>
-let basicToken = "Z2FicmllbGUuZmFjY2lhOk9VdGM1TjVvZlB4YXR0YUk="; // token tecnico
+let basicToken = "Z2FicmllbGUuZmFjY2lhOk9VdGM1TjVvZlB4YXR0YUk=";
 let currentUsername = "";
 let assignedUserId = "";
 
-// Simula login visivo
+// Login visuale, ma tecnico con token Gabriele
 function accedi() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("accessKey").value;
   currentUsername = username;
 
-  // Query per ottenere l'id utente tramite nome utente
+  // Query corretta con escape e punto e virgola
+  const queryString = "SELECT id FROM Users WHERE user_name=\"" + username + "\";";
+  
   fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query", {
     method: "POST",
     headers: {
       "Authorization": "Basic " + basicToken,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      query: `SELECT id FROM Users WHERE user_name='${username}'`
-    })
+    body: JSON.stringify({ query: queryString })
   })
   .then(res => res.json())
   .then(data => {
@@ -41,12 +38,14 @@ function accedi() {
     } else {
       alert("Utente non trovato.");
     }
+  })
+  .catch(() => {
+    alert("Errore di rete o server.");
   });
 }
 
 function timbra() {
   const tipo = document.getElementById("tipo").value;
-
   navigator.geolocation.getCurrentPosition(pos => {
     const lat = pos.coords.latitude.toString();
     const lon = pos.coords.longitude.toString();
@@ -112,6 +111,5 @@ function timbra() {
   </select>
   <button onclick="timbra()">Timbra Ora</button>
 </div>
-
 </body>
 </html>
