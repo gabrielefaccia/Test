@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Timbratore Mobile</title>
+  <title>Timbratore Mobile - DEBUG</title>
 </head>
 <body>
 <script>
@@ -13,11 +13,13 @@ let currentUsername = "";
 let assignedUserId = "";
 
 function accedi() {
-  const username = document.getElementById("username").value;
+  const username = document.getElementById("username").value.trim();
   const password = document.getElementById("accessKey").value;
   currentUsername = username;
 
   const queryString = `SELECT id FROM Users WHERE user_name="${username}";`;
+  console.log("Query inviata:", queryString);
+  console.log("Token Base64:", basicToken);
 
   fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query", {
     method: "POST",
@@ -29,6 +31,7 @@ function accedi() {
   })
   .then(res => res.json())
   .then(data => {
+    console.log("Risposta server:", JSON.stringify(data));
     if (data.status === 200 && data.data.length > 0) {
       assignedUserId = data.data[0].id;
       document.getElementById("loginBox").style.display = "none";
@@ -37,65 +40,15 @@ function accedi() {
       alert("Utente non trovato.");
     }
   })
-  .catch(() => {
+  .catch(err => {
+    console.error("Errore fetch:", err);
     alert("Errore di rete o server.");
-  });
-}
-
-function timbra() {
-  const tipo = document.getElementById("tipo").value;
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude.toString();
-    const lon = pos.coords.longitude.toString();
-
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-    .then(res => res.json())
-    .then(loc => {
-      const indirizzo = loc.display_name || "Indirizzo non disponibile";
-      const now = new Date();
-      const data = now.toISOString().split("T")[0];
-      const oraSec = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()).toString();
-
-      const payload = {
-        elementType: "Timbrature",
-        element: {
-          vcf_1_1: "timbratura mobile",
-          vcf_1_2: tipo,
-          vcf_1_3: lat,
-          vcf_1_4: lon,
-          vcf_1_5: indirizzo,
-          vcf_1_6: data,
-          vcf_1_7: oraSec,
-          assigned_user_id: assignedUserId,
-          description: "Timbratura via mobile da " + currentUsername
-        }
-      };
-
-      fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
-        method: "POST",
-        headers: {
-          "Authorization": "Basic " + basicToken,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(ris => {
-        if (ris.status === 200) {
-          alert("Timbratura registrata con successo");
-        } else {
-          alert("Errore nella timbratura");
-        }
-      });
-    });
-  }, () => {
-    alert("Geolocalizzazione negata.");
   });
 }
 </script>
 
 <div id="loginBox">
-  <h2>Login</h2>
+  <h2>Login (DEBUG attivo)</h2>
   <input type="text" id="username" placeholder="Nome utente" />
   <input type="password" id="accessKey" placeholder="Access Key" />
   <button onclick="accedi()">Accedi</button>
@@ -103,11 +56,7 @@ function timbra() {
 
 <div id="timbraturaBox" style="display:none;">
   <h2>Timbratura</h2>
-  <select id="tipo">
-    <option value="Entrata">Entrata</option>
-    <option value="Uscita">Uscita</option>
-  </select>
-  <button onclick="timbra()">Timbra Ora</button>
+  <button onclick="alert('Timbratura simulata')">Timbra</button>
 </div>
 </body>
 </html>
