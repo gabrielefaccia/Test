@@ -4,19 +4,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Timbratore con utente dinamico</title>
+  <title>Timbratore con ID utente</title>
 </head>
 <body>
-<h2>Timbratore Login</h2>
+<h2>Login (ID utente)</h2>
 <div id="loginBox">
-  <input type="text" id="username" placeholder="Nome utente (es. Luca.scurto)" />
+  <input type="text" id="userid" placeholder="ID utente (es. 19x4)" />
   <input type="password" id="accessKey" placeholder="Access Key" />
   <button onclick="accedi()">Accedi</button>
   <p id="loginMsg" style="color:red;"></p>
 </div>
 
 <div id="timbraturaBox" style="display:none;">
-  <h3>Timbratura Mobile</h3>
+  <h3>Timbratura</h3>
   <select id="tipo">
     <option value="Entrata">Entrata</option>
     <option value="Uscita">Uscita</option>
@@ -30,34 +30,31 @@ let basicToken = "";
 let assignedUserId = "";
 
 function accedi() {
-  const username = document.getElementById("username").value.trim();
+  const userid = document.getElementById("userid").value.trim();
   const accessKey = document.getElementById("accessKey").value.trim();
-  if (!username || !accessKey) {
-    document.getElementById("loginMsg").innerText = "Inserisci nome utente e Access Key.";
+  if (!userid || !accessKey) {
+    document.getElementById("loginMsg").innerText = "Inserisci ID utente e Access Key.";
     return;
   }
 
-  basicToken = btoa(username + ":" + accessKey);
+  assignedUserId = userid;
+  basicToken = btoa(userid + ":" + accessKey);
 
-  // Query per recuperare l'ID dell'utente
-  const query = `SELECT id FROM Users WHERE user_name='${username}'`;
-
+  // Verifica autenticazione
   fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/query", {
     method: "POST",
     headers: {
       "Authorization": "Basic " + basicToken,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ query })
+    body: JSON.stringify({ query: "SELECT id FROM Users LIMIT 1;" })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status === 200 && data.data.length > 0) {
-      assignedUserId = data.data[0].id;
+  .then(res => {
+    if (res.status === 200) {
       document.getElementById("loginBox").style.display = "none";
       document.getElementById("timbraturaBox").style.display = "block";
     } else {
-      document.getElementById("loginMsg").innerText = "Utente non trovato o credenziali errate.";
+      document.getElementById("loginMsg").innerText = "Credenziali non valide.";
     }
   })
   .catch(() => {
@@ -90,7 +87,7 @@ function timbra() {
           vcf_1_6: data,
           vcf_1_7: oraSec,
           assigned_user_id: assignedUserId,
-          description: "Timbratura via mobile"
+          description: "Timbratura da utente " + assignedUserId
         }
       };
 
