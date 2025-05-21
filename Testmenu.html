@@ -108,21 +108,35 @@
       currentUsername = username;
       basicToken = btoa(username + ":" + accessKey);
 
-      fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
+      
+fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
         method: "OPTIONS",
         headers: {
           "Authorization": "Basic " + basicToken
         }
-      }).then(res => {
+      })
+  .then(response => {
+    if (!response.ok) {
+      alert("Errore HTTP: " + response.status);
+      throw new Error("Errore HTTP: " + response.status);
+    }
+    return response.json();
+  })
+  .then(res => {
         if (res.status === 200 || res.status === 401) {
           document.getElementById("loginBox").style.display = "none";
           document.getElementById("timbraturaBox").style.display = "block";
         } else {
           document.getElementById("loginMsg").innerText = "Accesso negato.";
         }
-      }).catch(err => {
+      })
+  .catch(error => {
+    alert("Errore durante la timbratura: " + error.message);
+    err => {
         document.getElementById("loginMsg").innerText = "Errore di rete.";
-      });
+      }
+  });
+
     }
 
     function timbra() {
@@ -197,62 +211,5 @@
       document.querySelector("button[onclick='timbra()']").style.display = "inline-block";
     }
   </script>
-
-<script>
-  window.onerror = function(msg, url, line, col, error) {
-    alert("Errore JS:\n" + msg + "\nLinea: " + line);
-  };
-
-  function mostraErrore(msg) {
-    alert("Errore visibile: " + msg);
-    const banner = document.getElementById("msgBanner");
-    if (banner) {
-      banner.style.display = "block";
-      banner.className = "error";
-      banner.innerText = "Errore: " + msg;
-    }
-  }
-
-  // Intercetta errori fetch
-  function inviaTimbratura(dati) {
-    fetch("https://example.com/api", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dati)
-    })
-    .then(response => {
-      if (!response.ok) {
-        mostraErrore("Timbratura non registrata (HTTP " + response.status + ")");
-        throw new Error("Errore HTTP: " + response.status);
-      }
-      return response.json();
-    })
-    .then(data => {
-      alert("Timbratura registrata correttamente!");
-    })
-    .catch(error => {
-      alert("Errore fetch: " + error.message);
-    });
-  }
-
-  // Geolocalizzazione
-  function ottieniPosizione(callback) {
-    if (!navigator.geolocation) {
-      mostraErrore("Geolocalizzazione non supportata dal browser");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      posizione => {
-        callback(posizione);
-      },
-      errore => {
-        mostraErrore("Errore geolocalizzazione: " + errore.message);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
-</script>
-
 </body>
 </html>
