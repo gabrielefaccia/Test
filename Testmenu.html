@@ -108,35 +108,21 @@
       currentUsername = username;
       basicToken = btoa(username + ":" + accessKey);
 
-      
-fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
+      fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
         method: "OPTIONS",
         headers: {
           "Authorization": "Basic " + basicToken
         }
-      })
-  .then(response => {
-    if (!response.ok) {
-      alert("Errore HTTP: " + response.status);
-      throw new Error("Errore HTTP: " + response.status);
-    }
-    return response.json();
-  })
-  .then(res => {
+      }).then(res => {
         if (res.status === 200 || res.status === 401) {
           document.getElementById("loginBox").style.display = "none";
           document.getElementById("timbraturaBox").style.display = "block";
         } else {
           document.getElementById("loginMsg").innerText = "Accesso negato.";
         }
-      })
-  .catch(error => {
-    alert("Errore durante la timbratura: " + error.message);
-    err => {
+      }).catch(err => {
         document.getElementById("loginMsg").innerText = "Errore di rete.";
-      }
-  });
-
+      });
     }
 
     function timbra() {
@@ -147,7 +133,13 @@ fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
         const lon = pos.coords.longitude;
 
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+              alert("Errore HTTP: " + res.status);
+              throw new Error("HTTP error " + res.status);
+            }
+            return res.json();
+        })
         .then(data => {
           const indirizzo = data.display_name || "Indirizzo non trovato";
           const now = new Date();
@@ -177,9 +169,19 @@ fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
             },
             body: JSON.stringify(payload)
           })
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) {
+              alert("Errore HTTP: " + res.status);
+              throw new Error("HTTP error " + res.status);
+            }
+            return res.json();
+        })
           .then(data => {
             const banner = document.getElementById("msgBanner");
+            if (data.error || data.status !== 200 || !data.data || !data.data.id) {
+              alert("Errore dalla API: " + (data.error?.message || "timbratura non riuscita"));
+            }
+
             banner.style.display = "block";
             if (data.status === 200 && data.data && data.data.id) {
               banner.className = "";
@@ -194,7 +196,10 @@ fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
               banner.style.color = "#721c24";
               banner.innerText = "Errore: timbratura non registrata. (Riprovare quando avrai più connessione)";
             }
-          });
+          })
+        .catch(error => {
+          alert("Errore fetch: " + error.message);
+        });
         });
       }, () => {
         alert("Geolocalizzazione negata. Vai in Impostazioni > Browser > Posizione e attivala per questo sito.");
