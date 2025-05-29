@@ -107,18 +107,30 @@
       basicToken = btoa(username + ":" + accessKey);
 
       
-fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/users/me", {
-  method: "GET",
+fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
+  method: "OPTIONS",
   headers: {
     "Authorization": "Basic " + basicToken
   }
 })
-.then(res => res.json())
-.then(data => {
-  if (data && data.id) {
-    window.assignedUserId = data.id;
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("timbraturaBox").style.display = "block";
+.then(res => {
+  if (res.status === 200 || res.status === 401) {
+    fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/users/me", {
+      method: "GET",
+      headers: {
+        "Authorization": "Basic " + basicToken
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.id) {
+        window.assignedUserId = data.id;
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("timbraturaBox").style.display = "block";
+      } else {
+        document.getElementById("loginMsg").innerText = "Errore utente.";
+      }
+    });
   } else {
     document.getElementById("loginMsg").innerText = "Accesso negato.";
   }
