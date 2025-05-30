@@ -75,155 +75,43 @@
 </div>
 </div>
 <script>
-    
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(function() { console.log('Service Worker registrato'); });
+fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
+  method: "OPTIONS",
+  headers: {
+    "Authorization": "Basic " + basicToken
   }
-
-
-    function formatSecondsToTime(secStr) {
-      const sec = parseInt(secStr);
-      const hrs = String(Math.floor(sec / 3600)).padStart(2, '0');
-      const mins = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-      const secs = String(sec % 60).padStart(2, '0');
-      return `${hrs}:${mins}:${secs}`;
-    }
-
-    let basicToken = "";
-    let currentUsername = "";
-    function updateClock() {
-      const now = new Date();
-      const timeString = now.toLocaleTimeString();
-      document.getElementById("clock").textContent = timeString;
-    }
-    setInterval(updateClock, 1000);
-
-    function accedi() {
-      const username = document.getElementById("username").value;
-      const accessKey = document.getElementById("accessKey").value;
-      currentUsername = username;
-      basicToken = btoa(username + ":" + accessKey);
-
-      document.getElementById("debugOutput").value = "Invio chiamata OPTIONS...";
-fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
-        method: "OPTIONS",
-        headers: {
-          "Authorization": "Basic " + basicToken
-        }
-      }).then(res => {
-        document.getElementById("debugOutput").value += "
-Risposta OPTIONS: " + res.status;
-    if (res.status === 200 || res.status === 401) {
-      document.getElementById("debugOutput").value += "
-Avvio chiamata /users/me...";
-      fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/users/me", {
-        method: "GET",
-        headers: {
-          "Authorization": "Basic " + basicToken
-        }
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("debugOutput").value += "
-Risposta /users/me:
-" + JSON.stringify(data, null, 2);
-        if (data && data.id) {
-          window.assignedUserId = data.id;
-          document.getElementById("loginBox").style.display = "none";
-          document.getElementById("timbraturaBox").style.display = "block";
-        } else {
-          document.getElementById("debugOutput").value += "
-Errore: id non trovato";
-        }
-      })
-      .catch(err => {
-        document.getElementById("debugOutput").value += "
-Errore fetch /users/me:
-" + err;
-      });
-          document.getElementById("loginBox").style.display = "none";
-          document.getElementById("timbraturaBox").style.display = "block";
-        } else {
-          document.getElementById("loginMsg").innerText = "Accesso negato.";
-        }
-      }).catch(err => {
-        document.getElementById("loginMsg").innerText = "Errore di rete.";
-      });
-    }
-
-    function timbra() {
-      const tipo = document.getElementById("tipo").value;
-
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        .then(res => res.json())
-        .then(data => {
-          const indirizzo = data.display_name || "Indirizzo non trovato";
-          const now = new Date();
-          const dataStr = now.toISOString().split("T")[0];
-          const ora = now.toTimeString().split(" ")[0];
-
-          const payload = {
-            elementType: "Timbrature",
-            element: {
-              vcf_1_1: "timbratura mobile",
-              vcf_1_2: tipo,
-              vcf_1_3: lat.toString(),
-              vcf_1_4: lon.toString(),
-              vcf_1_5: indirizzo,
-              vcf_1_6: dataStr,
-              vcf_1_7: ora,
-              assigned_user_id: assignedUserId,
-              description: "Timbratura via mobile da " + currentUsername
-            }
-          };
-
-          document.getElementById("debugOutput").value = "Invio chiamata OPTIONS...";
-fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
-            method: "POST",
-            headers: {
-              "Authorization": "Basic " + basicToken,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-          })
-          .then(res => res.json())
-          .then(data => {
-            const banner = document.getElementById("msgBanner");
-            banner.style.display = "block";
-            if (data.status === 200 && data.data && data.data.id) {
-              banner.className = "";
-              banner.style.backgroundColor = "#d4edda";
-              banner.style.color = "#155724";
-              banner.innerText = `Timbratura di ${tipo.toLowerCase()} registrata alle ${formatSecondsToTime(data.data.vcf_1_7)} del ${data.data.vcf_1_6} all’indirizzo:\n${data.data.vcf_1_5}`;
-              document.querySelector("button[onclick='timbra()']").style.display = "none";
-              document.getElementById("tipo").style.display = "none";
-            } else {
-              banner.className = "";
-              banner.style.backgroundColor = "#f8d7da";
-              banner.style.color = "#721c24";
-              banner.innerText = "Errore: timbratura non registrata. (Riprovare quando avrai più connessione)";
-            }
-          });
-        });
-      }, () => {
-        alert("Geolocalizzazione negata. Vai in Impostazioni > Browser > Posizione e attivala per questo sito.");
-      });
-    }
-
-    function logout() {
-      basicToken = "";
-      currentUsername = "";
-      document.getElementById("timbraturaBox").style.display = "none";
-      document.getElementById("loginBox").style.display = "block";
-      document.getElementById("msgBanner").style.display = "none";
-      document.getElementById("tipo").style.display = "inline-block";
-      document.querySelector("button[onclick='timbra()']").style.display = "inline-block";
-    }
-  </script>
+})
+.then(res => {
+  document.getElementById("debugOutput").value = "Login OPTIONS status: " + res.status;
+  if (res.status === 200 || res.status === 401) {
+    document.getElementById("debugOutput").value += "\nAvvio chiamata /users/me...";
+    fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/users/me", {
+      method: "GET",
+      headers: {
+        "Authorization": "Basic " + basicToken
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("debugOutput").value += "\nRisposta /users/me:\n" + JSON.stringify(data, null, 2);
+      if (data && data.id) {
+        window.assignedUserId = data.id;
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("timbraturaBox").style.display = "block";
+      } else {
+        document.getElementById("debugOutput").value += "\n⚠️ 'id' non trovato nella risposta.";
+      }
+    })
+    .catch(err => {
+      document.getElementById("debugOutput").value += "\nErrore fetch /users/me:\n" + err;
+    });
+  } else {
+    document.getElementById("loginMsg").innerText = "Accesso negato.";
+  }
+})
+.catch(err => {
+  document.getElementById("debugOutput").value += "\nErrore fetch OPTIONS:\n" + err;
+});
+        </script>
 </body>
 </html>
