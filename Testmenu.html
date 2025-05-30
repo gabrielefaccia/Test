@@ -112,8 +112,36 @@ fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/create", {
           "Authorization": "Basic " + basicToken
         }
       }).then(res => {
-        document.getElementById("debugOutput").value += "\nRisposta OPTIONS: " + res.status;
+        document.getElementById("debugOutput").value += "
+Risposta OPTIONS: " + res.status;
     if (res.status === 200 || res.status === 401) {
+      document.getElementById("debugOutput").value += "
+Avvio chiamata /users/me...";
+      fetch("https://crm.fefcentroautomazioni.it/restapi/v1/vtews/users/me", {
+        method: "GET",
+        headers: {
+          "Authorization": "Basic " + basicToken
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("debugOutput").value += "
+Risposta /users/me:
+" + JSON.stringify(data, null, 2);
+        if (data && data.id) {
+          window.assignedUserId = data.id;
+          document.getElementById("loginBox").style.display = "none";
+          document.getElementById("timbraturaBox").style.display = "block";
+        } else {
+          document.getElementById("debugOutput").value += "
+Errore: id non trovato";
+        }
+      })
+      .catch(err => {
+        document.getElementById("debugOutput").value += "
+Errore fetch /users/me:
+" + err;
+      });
           document.getElementById("loginBox").style.display = "none";
           document.getElementById("timbraturaBox").style.display = "block";
         } else {
