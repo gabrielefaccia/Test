@@ -208,20 +208,6 @@ function debugLog(msg) {
     console.log(msg);
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    const lastStartTime = localStorage.getItem("startWorkTime");
-    const tipoTimbratura = localStorage.getItem("lastTipo");
-    debugLog("📥 Pagina caricata");
-    debugLog("Tipo timbratura: " + tipoTimbratura);
-    debugLog("Start time salvato: " + lastStartTime);
-
-    if (lastStartTime && tipoTimbratura === "entrata") {
-        debugLog("⏱ Avvio timer persistente da caricamento pagina");
-        startWorkTimer(lastStartTime);
-    }
-});
-
-// Override della funzione esistente
 function startWorkTimer(startTime) {
     const timerElement = document.getElementById("workTimer");
     debugLog("⏱ startWorkTimer() chiamata con: " + startTime);
@@ -243,35 +229,6 @@ function startWorkTimer(startTime) {
     setInterval(updateTimer, 1000);
 }
 
-function handleTimbratura(tipo) {
-    const now = new Date();
-    debugLog("📌 Timbratura eseguita: " + tipo + " alle " + now.toLocaleTimeString());
-    localStorage.setItem("lastTipo", tipo);
-
-    if (tipo === "entrata") {
-        localStorage.setItem("startWorkTime", now.toISOString());
-        startWorkTimer(now.toISOString());
-        showBanner(`Timbratura di ENTRATA registrata alle ${now.toLocaleTimeString()}`);
-    }
-
-    if (tipo === "uscita") {
-        const startTime = localStorage.getItem("startWorkTime");
-        if (startTime) {
-            const diff = now - new Date(startTime);
-            const hours = Math.floor(diff / 3600000);
-            const minutes = Math.floor((diff % 3600000) / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-            showBanner(`Hai lavorato ${hours}h ${minutes}m ${seconds}s`);
-            localStorage.removeItem("startWorkTime");
-            localStorage.removeItem("lastTipo");
-            const timerElement = document.getElementById("workTimer");
-            if (timerElement) timerElement.innerText = "⏱ Timer non attivo";
-        } else {
-            showBanner("Timbratura di USCITA effettuata (tempo non calcolabile)");
-        }
-    }
-}
-
 function showBanner(message) {
     const msgBanner = document.getElementById("msgBanner");
     if (msgBanner) {
@@ -280,6 +237,42 @@ function showBanner(message) {
         msgBanner.innerText = message;
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    debugLog("📥 Pagina caricata");
+
+    const lastStartTime = localStorage.getItem("startWorkTime");
+    const tipoTimbratura = localStorage.getItem("lastTipo");
+    debugLog("Tipo timbratura: " + tipoTimbratura);
+    debugLog("Start time salvato: " + lastStartTime);
+
+    if (lastStartTime && tipoTimbratura === "entrata") {
+        debugLog("⏱ Avvio timer persistente da caricamento pagina");
+        startWorkTimer(lastStartTime);
+    }
+
+    // OBSERVER AUTOMATICO: intercetta la timbratura dal messaggio
+    const observer = new MutationObserver(() => {
+        const msg = document.getElementById("msgBanner")?.innerText || "";
+        if (msg.includes("Timbratura di entrata") && !localStorage.getItem("startWorkTime")) {
+            const now = new Date();
+            localStorage.setItem("lastTipo", "entrata");
+            localStorage.setItem("startWorkTime", now.toISOString());
+            debugLog("⏱ Timer avviato da observer");
+            startWorkTimer(now.toISOString());
+        }
+
+        if (msg.includes("Hai lavorato") || msg.includes("uscita")) {
+            localStorage.removeItem("lastTipo");
+            localStorage.removeItem("startWorkTime");
+            const timerElement = document.getElementById("workTimer");
+            if (timerElement) timerElement.innerText = "⏱ Timer non attivo";
+            debugLog("⏹ Timer azzerato dopo uscita");
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+});
 </script>
 </body>
 </html>
