@@ -197,6 +197,7 @@
     }
   </script>
 
+
 <script>
 // === TIMER VISUALE POST TIMBRATURA ENTRATA ===
 function startWorkTimer(startTime) {
@@ -223,6 +224,11 @@ document.addEventListener("DOMContentLoaded", function() {
     if (lastStartTime && tipoTimbratura === "entrata") {
         startWorkTimer(lastStartTime);
     }
+
+    const btn = document.getElementById("submitButton");
+    if (btn) {
+        btn.style.display = "block";
+    }
 });
 
 function handleTimbratura(tipo) {
@@ -231,6 +237,8 @@ function handleTimbratura(tipo) {
 
     if (tipo === "entrata") {
         localStorage.setItem("startWorkTime", now.toISOString());
+        startWorkTimer(now.toISOString());
+        showBanner(`Timbratura di ENTRATA registrata alle ${now.toLocaleTimeString()}`);
     }
 
     if (tipo === "uscita") {
@@ -241,14 +249,23 @@ function handleTimbratura(tipo) {
             const minutes = Math.floor((diff % 3600000) / 60000);
             const seconds = Math.floor((diff % 60000) / 1000);
             const message = `Hai lavorato ${hours}h ${minutes}m ${seconds}s`;
-            const msgBanner = document.getElementById("msgBanner");
-            if (msgBanner) {
-                msgBanner.style.display = "block";
-                msgBanner.className = "";
-                msgBanner.innerText = message;
-            }
+            showBanner(message);
             localStorage.removeItem("startWorkTime");
+            localStorage.removeItem("lastTipo");
+            const timerElement = document.getElementById("workTimer");
+            if (timerElement) timerElement.innerText = "";
+        } else {
+            showBanner("Timbratura di USCITA effettuata (tempo non calcolabile)");
         }
+    }
+}
+
+function showBanner(message) {
+    const msgBanner = document.getElementById("msgBanner");
+    if (msgBanner) {
+        msgBanner.style.display = "block";
+        msgBanner.className = "";
+        msgBanner.innerText = message;
     }
 }
 </script>
