@@ -199,7 +199,6 @@
 
 
 <script>
-// === TIMER VISUALE POST TIMBRATURA ENTRATA ===
 function startWorkTimer(startTime) {
     const timerElement = document.getElementById("workTimer");
     if (!timerElement) return;
@@ -210,26 +209,12 @@ function startWorkTimer(startTime) {
         const hours = Math.floor(diff / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
-        timerElement.innerText = `Tempo lavorato: ${hours}h ${minutes}m ${seconds}s`;
+        timerElement.innerText = `⏱ Tempo lavorato: ${hours}h ${minutes}m ${seconds}s`;
     }
 
     updateTimer();
     setInterval(updateTimer, 1000);
 }
-
-document.addEventListener("DOMContentLoaded", function() {
-    const lastStartTime = localStorage.getItem("startWorkTime");
-    const tipoTimbratura = localStorage.getItem("lastTipo");
-
-    if (lastStartTime && tipoTimbratura === "entrata") {
-        startWorkTimer(lastStartTime);
-    }
-
-    const btn = document.getElementById("submitButton");
-    if (btn) {
-        btn.style.display = "block";
-    }
-});
 
 function handleTimbratura(tipo) {
     const now = new Date();
@@ -248,8 +233,7 @@ function handleTimbratura(tipo) {
             const hours = Math.floor(diff / 3600000);
             const minutes = Math.floor((diff % 3600000) / 60000);
             const seconds = Math.floor((diff % 60000) / 1000);
-            const message = `Hai lavorato ${hours}h ${minutes}m ${seconds}s`;
-            showBanner(message);
+            showBanner(`Hai lavorato ${hours}h ${minutes}m ${seconds}s`);
             localStorage.removeItem("startWorkTime");
             localStorage.removeItem("lastTipo");
             const timerElement = document.getElementById("workTimer");
@@ -268,6 +252,15 @@ function showBanner(message) {
         msgBanner.innerText = message;
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    const lastStartTime = localStorage.getItem("startWorkTime");
+    const tipoTimbratura = localStorage.getItem("lastTipo");
+
+    if (lastStartTime && tipoTimbratura === "entrata") {
+        startWorkTimer(lastStartTime);
+    }
+});
 </script>
 </body>
 </html>
