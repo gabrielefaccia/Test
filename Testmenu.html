@@ -208,6 +208,18 @@ function debugLog(msg) {
     console.log(msg);
 }
 
+function getUsername() {
+    const userDisplay = document.querySelector(".userName, .username, #userDisplayName");
+    if (userDisplay) {
+        return userDisplay.innerText.trim();
+    }
+    return localStorage.getItem("loggedInUsername") || "utente";
+}
+
+function getTimerKey() {
+    return "startWorkTime_" + getUsername();
+}
+
 function startWorkTimer(startTime) {
     const timerElement = document.getElementById("workTimer");
     debugLog("⏱ startWorkTimer() chiamata con: " + startTime);
@@ -239,10 +251,13 @@ function showBanner(message) {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    debugLog("📥 Pagina caricata");
+    const username = getUsername();
+    debugLog("📥 Pagina caricata come: " + username);
 
-    const lastStartTime = localStorage.getItem("startWorkTime");
-    const tipoTimbratura = localStorage.getItem("lastTipo");
+    const key = getTimerKey();
+    const lastStartTime = localStorage.getItem(key);
+    const tipoTimbratura = localStorage.getItem("lastTipo_" + username);
+
     debugLog("Tipo timbratura: " + tipoTimbratura);
     debugLog("Start time salvato: " + lastStartTime);
 
@@ -251,23 +266,22 @@ document.addEventListener("DOMContentLoaded", function() {
         startWorkTimer(lastStartTime);
     }
 
-    // OBSERVER AUTOMATICO: intercetta la timbratura dal messaggio
     const observer = new MutationObserver(() => {
         const msg = document.getElementById("msgBanner")?.innerText || "";
-        if (msg.includes("Timbratura di entrata") && !localStorage.getItem("startWorkTime")) {
+        if (msg.includes("Timbratura di entrata") && !localStorage.getItem(key)) {
             const now = new Date();
-            localStorage.setItem("lastTipo", "entrata");
-            localStorage.setItem("startWorkTime", now.toISOString());
-            debugLog("⏱ Timer avviato da observer");
+            localStorage.setItem("lastTipo_" + username, "entrata");
+            localStorage.setItem(key, now.toISOString());
+            debugLog("⏱ Timer avviato da observer per " + username);
             startWorkTimer(now.toISOString());
         }
 
         if (msg.includes("Hai lavorato") || msg.includes("uscita")) {
-            localStorage.removeItem("lastTipo");
-            localStorage.removeItem("startWorkTime");
+            localStorage.removeItem("lastTipo_" + username);
+            localStorage.removeItem(key);
             const timerElement = document.getElementById("workTimer");
             if (timerElement) timerElement.innerText = "⏱ Timer non attivo";
-            debugLog("⏹ Timer azzerato dopo uscita");
+            debugLog("⏹ Timer azzerato dopo uscita per " + username);
         }
     });
 
