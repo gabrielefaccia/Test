@@ -211,13 +211,19 @@ function debugLog(msg) {
 function getUsername() {
     const userDisplay = document.querySelector(".userName, .username, #userDisplayName");
     if (userDisplay) {
-        return userDisplay.innerText.trim();
+        const username = userDisplay.innerText.trim();
+        localStorage.setItem("loggedInUsername", username);
+        return username;
     }
     return localStorage.getItem("loggedInUsername") || "utente";
 }
 
 function getTimerKey() {
     return "startWorkTime_" + getUsername();
+}
+
+function getTipoKey() {
+    return "lastTipo_" + getUsername();
 }
 
 function startWorkTimer(startTime) {
@@ -255,29 +261,30 @@ document.addEventListener("DOMContentLoaded", function() {
     debugLog("📥 Pagina caricata come: " + username);
 
     const key = getTimerKey();
+    const tipoKey = getTipoKey();
     const lastStartTime = localStorage.getItem(key);
-    const tipoTimbratura = localStorage.getItem("lastTipo_" + username);
+    const tipoTimbratura = localStorage.getItem(tipoKey);
 
     debugLog("Tipo timbratura: " + tipoTimbratura);
     debugLog("Start time salvato: " + lastStartTime);
 
     if (lastStartTime && tipoTimbratura === "entrata") {
-        debugLog("⏱ Avvio timer persistente da caricamento pagina");
+        debugLog("⏱ Timer ripristinato al caricamento");
         startWorkTimer(lastStartTime);
     }
 
     const observer = new MutationObserver(() => {
         const msg = document.getElementById("msgBanner")?.innerText || "";
-        if (msg.includes("Timbratura di entrata") && !localStorage.getItem(key)) {
+        if (msg.includes("Timbratura di entrata")) {
             const now = new Date();
-            localStorage.setItem("lastTipo_" + username, "entrata");
+            localStorage.setItem(tipoKey, "entrata");
             localStorage.setItem(key, now.toISOString());
             debugLog("⏱ Timer avviato da observer per " + username);
             startWorkTimer(now.toISOString());
         }
 
         if (msg.includes("Hai lavorato") || msg.includes("uscita")) {
-            localStorage.removeItem("lastTipo_" + username);
+            localStorage.removeItem(tipoKey);
             localStorage.removeItem(key);
             const timerElement = document.getElementById("workTimer");
             if (timerElement) timerElement.innerText = "⏱ Timer non attivo";
